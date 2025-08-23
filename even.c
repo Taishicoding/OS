@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     /*Overiding the SIGINT(Interupt in signal) to the Yeah function*/
     signal(SIGINT, yeah);
     for (int i = 0; i < n; i++) {
-        printf("Even number %d: %d\n", i + 1, i * 2);
+        printf("%d\n", i * 2);
         fflush(stdout);  
         sleep(5); 
     }
