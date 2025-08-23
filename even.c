@@ -28,10 +28,6 @@ int main(int argc, char *argv[]) {
     struct sigaction sa_int = {0};
     sa_int.sa_handler = yeah;
     sa_int.sa_flags = SA_RESTART; 
-    sigaction(SIGINT, &sa_int, NULL);
-    /*Overiding the SIGHUP (terminal cancel) to the Ouch function*/
-    signal(SIGHUP, ouch);
-    /*Overiding the SIGINT(Interupt in signal) to the Yeah function*/
     signal(SIGINT, yeah);
     for (int i = 0; i < n; i++) {
         printf("%d\n", i * 2);
