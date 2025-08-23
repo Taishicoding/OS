@@ -17,8 +17,6 @@ void yeah(int sig) {
     printf("Yeah!");
 }
 int main(int argc, char *argv[]) {
-    /*Converting command prompt input into integer*/
-    int n = atoi(argv[1]);
     /*Overiding the SIGHUP (terminal cancel) to the Ouch function*/
     signal(SIGHUP, ouch);
     /*Overiding the SIGINT(Interupt in signal) to the Yeah function*/
