@@ -17,11 +17,23 @@ void yeah(int sig) {
     printf("Yeah!");
 }
 int main(int argc, char *argv[]) {
+    /*Converting command prompt input into integer*/
+    int n = atoi(argv[1]);
+    /*Setting Up single handlers after signal handling error*/
+    struct sigaction sa_hup = {0};
+    sa_hup.sa_handler = ouch;
+    sa_hup.sa_flags = SA_RESTART; 
+    sigaction(SIGHUP, &sa_hup, NULL);
+    /*Setting Up single handlers after signal handling error*/
+    struct sigaction sa_int = {0};
+    sa_int.sa_handler = yeah;
+    sa_int.sa_flags = SA_RESTART; 
+    sigaction(SIGINT, &sa_int, NULL);
     /*Overiding the SIGHUP (terminal cancel) to the Ouch function*/
     signal(SIGHUP, ouch);
     /*Overiding the SIGINT(Interupt in signal) to the Yeah function*/
     signal(SIGINT, yeah);
-    for (int i = 0; i < argc; i++) {
+    for (int i = 0; i < n; i++) {
         printf("%d\n", i * 2);
         sleep(5); 
     }
