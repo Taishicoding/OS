@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     struct sigaction sa_int = {0};
     sa_int.sa_handler = yeah;
     sa_int.sa_flags = SA_RESTART; 
-    signal(SIGINT, yeah);
+    sigaction(SIGINT, &sa_int, NULL);
     for (int i = 0; i < n; i++) {
         printf("%d\n", i * 2);
         sleep(5); 
