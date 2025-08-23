@@ -9,13 +9,13 @@
 /*Function Explanton: This signal is sent when terminal collection
 is lost, throughout the ouch function, it is overridden to provide the "Ouch" output*/
 void ouch(int sig) {
-    printf("Ouch!");
+    write(1, "Ouch!\n", 6);
     fflush(stdout);
 }
 /*Function Explanation: This signal is the Signal Interupt signal
 usually operated through CTRL+C, it's output is overrided, to print Yeah*/
 void yeah(int sig) {
-    printf("Yeah!");
+    write(1, "Yeah!\n", 6);
     fflush(stdout);
 }
 int main(int argc, char *argv[]) {
