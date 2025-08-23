@@ -25,7 +25,6 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, yeah);
     for (int i = 0; i < n; i++) {
         printf("%d\n", i * 2);
-        fflush(stdout);  
         sleep(5); 
     }
     return 0;
