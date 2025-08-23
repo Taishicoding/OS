@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     signal(SIGHUP, ouch);
     /*Overiding the SIGINT(Interupt in signal) to the Yeah function*/
     signal(SIGINT, yeah);
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < argc; i++) {
         printf("%d\n", i * 2);
         sleep(5); 
     }
