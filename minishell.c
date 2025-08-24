@@ -16,6 +16,7 @@ Date : 23/08/2025
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <errno.h>
 
 #define NV 20  /* max number of command tokens */
 #define NL 100 /* input buffer size */
