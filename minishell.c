@@ -36,6 +36,7 @@ int next_job_id = 1;
 shell prompt
 */
 void prompt(void) {
+    fprintf(stdout, "\n msh> ");
     fflush(stdout);
 }
 /*Initialising the background jobs array to an empty state*/
@@ -81,16 +82,10 @@ Returning instantanely provided there is no terminated child*/
 void check_background_processes(void) {
     int status;
     pid_t pid;
-    int i;
-    for (i = 0; i < NV; i++) {
-        if (bg_jobs[i].active) {
-            pid = waitpid(bg_jobs[i].pid, &status, WNOHANG);
-            if (pid == -1) {
-                perror("waitpid");
-            } else if (pid > 0) {
-                remove_bg_job(pid);
-            }
-        }
+    
+    /* Check for ANY completed child process using waitpid(-1) */
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        remove_bg_job(pid);
     }
 }
 /*Reconstructing the command string from the token array*/
@@ -165,10 +160,20 @@ int main(int argk, char *argv[], char *envp[]) {
         }
 
         if (strcmp(v[0], "cd") == 0) {
-            char *dir = (i > 1) ? v[1] : getenv("HOME");
-            if (dir == NULL) {
-                fprintf(stderr, "cd: HOME not set\n");
-            } else if (chdir(dir) == -1) {
+            char *dir;
+            if (v[1] == NULL) {
+                /* No argument - use HOME directory */
+                dir = getenv("HOME");
+                if (dir == NULL) {
+                    fprintf(stderr, "cd: HOME not set\n");
+                    continue;
+                }
+            } else {
+                /* Use provided directory */
+                dir = v[1];
+            }
+            
+            if (chdir(dir) == -1) {
                 perror("cd");
             }
             continue;
@@ -195,6 +200,7 @@ int main(int argk, char *argv[], char *envp[]) {
                     if (waitpid(frkRtnVal, NULL, 0) == -1) {
                         perror("waitpid");
                     }
+                    printf("%s done \n", v[0]);
                 } else {
                     job_id = add_bg_job(frkRtnVal, cmd_string);
                     if (job_id != -1) {
