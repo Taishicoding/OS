@@ -7,7 +7,7 @@ cd command, perror for system calls, and proper exec failure handling
 File : minishell.c
 Compiler/System : gcc/linux
 Author : Taishi Morgan A1904976
-Date :23/08/2025
+Date : 23/08/2025
 ********************************************************************/
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -59,10 +59,15 @@ int add_bg_job(pid_t pid, char *command) {
             bg_jobs[i].pid = pid;
             bg_jobs[i].job_id = next_job_id++;
             bg_jobs[i].command = strdup(command);
+            if (bg_jobs[i].command == NULL) {
+                perror("strdup");
+                return -1;
+            }
             bg_jobs[i].active = 1;
             return bg_jobs[i].job_id;
         }
     }
+    fprintf(stderr, "Error: No slots available for background job\n");
     return -1;
 }
 
@@ -120,8 +125,13 @@ int main(int argk, char *argv[], char *envp[]) {
     int background; /*Flagging background process detection*/
     char cmd_string[NL]; /*buffer when reconstructing command*/
     int job_id; /*Job id for background processses*/
+    
+    /* Set stdout to unbuffered to ensure output visibility */
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     /*Initialising background job tracking*/
     init_bg_jobs();
+    
     /* prompt for and process one command line at a time */
     while (1) { /* do Forever */
         /*before each prompt checking background processes*/
@@ -166,7 +176,7 @@ int main(int argk, char *argv[], char *envp[]) {
             continue;
         }
 
-        /*Checking for the progress Ampersand and removing for arg list*/
+        /*Checking for the process Ampersand and removing for arg list*/
         background = 0;
         if (i > 1 && strcmp(v[i - 1], "&") == 0) {
             background = 1;
@@ -182,8 +192,8 @@ int main(int argk, char *argv[], char *envp[]) {
         /* Handle cd command */
         if (strcmp(v[0], "cd") == 0) {
             char *dir;
-            if (v[1] == NULL) {
-                /* No argument - use HOME directory */
+            if (v[1] == NULL || (v[1][0] == '~' && v[1][1] == '\0')) {
+                /* No argument or ~ - use HOME directory */
                 dir = getenv("HOME");
                 if (dir == NULL) {
                     fprintf(stderr, "cd: HOME not set\n");
@@ -194,7 +204,7 @@ int main(int argk, char *argv[], char *envp[]) {
                 dir = v[1];
             }
             if (chdir(dir) == -1) {
-                perror("cd: chdir failed");
+                fprintf(stderr, "cd: %s: %s\n", dir, strerror(errno));
             }
             continue;
         }
