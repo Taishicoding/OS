@@ -16,7 +16,6 @@ Date : 23/08/2025
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <errno.h>
 
 #define NV 20  /* max number of command tokens */
 #define NL 100 /* input buffer size */
@@ -30,6 +29,7 @@ struct bg_job {
     char *command;
     int active;
 };
+
 struct bg_job bg_jobs[NV];
 int next_job_id = 1;
 
@@ -37,7 +37,6 @@ int next_job_id = 1;
 shell prompt
 */
 void prompt(void) {
-    fprintf(stdout, "\n msh> ");
     fflush(stdout);
 }
 
@@ -60,15 +59,10 @@ int add_bg_job(pid_t pid, char *command) {
             bg_jobs[i].pid = pid;
             bg_jobs[i].job_id = next_job_id++;
             bg_jobs[i].command = strdup(command);
-            if (bg_jobs[i].command == NULL) {
-                perror("strdup");
-                return -1;
-            }
             bg_jobs[i].active = 1;
             return bg_jobs[i].job_id;
         }
     }
-    fprintf(stderr, "Error: No slots available for background job\n");
     return -1;
 }
 
@@ -78,7 +72,6 @@ void remove_bg_job(pid_t pid) {
     for (i = 0; i < NV; i++) {
         if (bg_jobs[i].active && bg_jobs[i].pid == pid) {
             printf("[%d]+ Done                 %s\n", bg_jobs[i].job_id, bg_jobs[i].command);
-            fflush(stdout); /* Ensure Done message is visible */
             free(bg_jobs[i].command);
             bg_jobs[i].active = 0;
             bg_jobs[i].pid = 0;
@@ -93,15 +86,9 @@ Returning instantanely provided there is no terminated child*/
 void check_background_processes(void) {
     int status;
     pid_t pid;
-    for (int i = 0; i < NV; i++) {
-        if (bg_jobs[i].active) {
-            pid = waitpid(bg_jobs[i].pid, &status, WNOHANG);
-            if (pid == -1) {
-                perror("waitpid");
-            } else if (pid > 0) {
-                remove_bg_job(pid);
-            }
-        }
+    
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        remove_bg_job(pid);
     }
 }
 
@@ -126,13 +113,10 @@ int main(int argk, char *argv[], char *envp[]) {
     int background; /*Flagging background process detection*/
     char cmd_string[NL]; /*buffer when reconstructing command*/
     int job_id; /*Job id for background processses*/
-    
-    /* Set stdout to unbuffered to ensure output visibility */
-    setvbuf(stdout, NULL, _IONBF, 0);
 
     /*Initialising background job tracking*/
     init_bg_jobs();
-    
+
     /* prompt for and process one command line at a time */
     while (1) { /* do Forever */
         /*before each prompt checking background processes*/
@@ -142,42 +126,35 @@ int main(int argk, char *argv[], char *envp[]) {
         if (fgets(line, NL, stdin) == NULL) {
             perror("fgets");
             if (feof(stdin)) {
-                /* Clean up background processes */
-                for (i = 0; i < NV; i++) {
-                    if (bg_jobs[i].active) {
-                        if (kill(bg_jobs[i].pid, SIGTERM) == -1) {
-                            perror("kill");
-                        }
-                        if (waitpid(bg_jobs[i].pid, NULL, 0) == -1) {
-                            perror("waitpid");
-                        }
-                        free(bg_jobs[i].command);
-                        bg_jobs[i].active = 0;
-                    }
-                }
                 exit(0);
             }
             continue;
         }
         fflush(stdin);
 
-        if (line[0] == '#' || line[0] == '\n' || line[0] == '\0') {
+        // This if() required for gradescope
+        if (feof(stdin)) { /* non-zero on EOF */
+            exit(0);
+        }
+
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\000'){
             continue; /* to prompt */
         }
 
         v[0] = strtok(line, sep);
         for (i = 1; i < NV; i++) {
             v[i] = strtok(NULL, sep);
-            if (v[i] == NULL) {
+            if (v[i] == NULL){
                 break;
             }
         }
+        /* assert i is number of tokens + 1 */
 
         if (v[0] == NULL) {
             continue;
         }
 
-        /*Checking for the process Ampersand and removing for arg list*/
+        /*Checking for the progress Ampersand and removing for arg list*/
         background = 0;
         if (i > 1 && strcmp(v[i - 1], "&") == 0) {
             background = 1;
@@ -190,22 +167,20 @@ int main(int argk, char *argv[], char *envp[]) {
             reconstruct_command(v, cmd_string, i);
         }
 
-        /* Handle cd command */
         if (strcmp(v[0], "cd") == 0) {
             char *dir;
-            if (v[1] == NULL || (v[1][0] == '~' && v[1][1] == '\0')) {
-                /* No argument or ~ - use HOME directory */
+            if (v[1] == NULL) {
                 dir = getenv("HOME");
                 if (dir == NULL) {
                     fprintf(stderr, "cd: HOME not set\n");
                     continue;
                 }
             } else {
-                /* Use provided directory */
                 dir = v[1];
             }
+            
             if (chdir(dir) == -1) {
-                fprintf(stderr, "cd: %s: %s\n", dir, strerror(errno));
+                perror("cd");
             }
             continue;
         }
@@ -231,15 +206,10 @@ int main(int argk, char *argv[], char *envp[]) {
                     if (waitpid(frkRtnVal, NULL, 0) == -1) {
                         perror("waitpid");
                     }
-                    printf("%s done \n", v[0]);
-                    fflush(stdout);
                 } else {
                     job_id = add_bg_job(frkRtnVal, cmd_string);
                     if (job_id != -1) {
                         printf("[%d] %d\n", job_id, frkRtnVal);
-                        fflush(stdout); /* Ensure background job output is visible */
-                    } else {
-                        fprintf(stderr, "Error: No slots available for background job\n");
                     }
                 }
                 break;
